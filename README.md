@@ -1,4 +1,4 @@
-# Smartpay
+# SmartPay
 
 ## Description
 
