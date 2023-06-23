@@ -2,7 +2,7 @@ package types
 
 import "github.com/shopspring/decimal"
 
-type Inflation struct {
+type FinancialData struct {
 	Date  string
 	Index decimal.Decimal
 }

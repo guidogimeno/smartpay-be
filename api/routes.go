@@ -39,8 +39,18 @@ func handlePaymentAnalysis(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	payment := paymentRequest.ToPayment()
-	analysis := services.PaymentAnalysis(payment)
+	payment, err := paymentRequest.ToPayment()
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	analysis, err := services.PaymentAnalysis(payment)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	analysisResponse := analysis.ToAnalysisResponse()
 
 	writeJSON(w, http.StatusOK, analysisResponse)

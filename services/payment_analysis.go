@@ -1,33 +1,39 @@
 package services
 
 import (
+	"github.com/guidogimeno/smartpay-be/scrapper"
 	"github.com/guidogimeno/smartpay-be/types"
+	"github.com/guidogimeno/smartpay-be/utils"
 	"github.com/shopspring/decimal"
 )
 
-const (
-	inflationRate = 0.078
-	tnaRate       = 0.97
-)
-
-func PaymentAnalysis(payment *types.Payment) *types.Analysis {
+func PaymentAnalysis(payment *types.Payment) (*types.Analysis, error) {
 	installmentWithInterest := calculateInstallmentWithInterest(payment)
-	installmentsAtPresentValue := calculateInstallmentsWithInflation(
+
+	installmentsAtPresentValue, err := calculateInstallmentsWithInflation(
 		installmentWithInterest,
 		payment.NumberOfInstallments,
 	)
+	if err != nil {
+		return nil, err
+	}
+
 	totalAtPresentValue := sumInstallments(installmentsAtPresentValue)
-	savingsFromFixedTermDeposit := calculateSavingsFromFixedTermDeposit(
+
+	savingsFromFixedTermDeposit, err := calculateSavingsFromFixedTermDeposit(
 		payment.Amount,
 		installmentWithInterest,
 		payment.NumberOfInstallments,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	return &types.Analysis{
 		TotalAtPresentValue:         totalAtPresentValue,
 		InstallmentsAtPresentValue:  installmentsAtPresentValue,
 		SavingsFromFixedTermDeposit: savingsFromFixedTermDeposit,
-	}
+	}, nil
 }
 
 func calculateInstallmentWithInterest(payment *types.Payment) decimal.Decimal {
@@ -40,8 +46,16 @@ func calculateInstallmentWithInterest(payment *types.Payment) decimal.Decimal {
 func calculateInstallmentsWithInflation(
 	installmentAmount decimal.Decimal,
 	numOfInstallments int,
-) []*types.Installment {
-	inflation := decimal.NewFromFloat(inflationRate)
+) ([]*types.Installment, error) {
+	startDate := utils.NewClock().AddMonths(-2).Format()
+	finishDate := utils.NewClock().AddMonths(-1).Format()
+
+	financialData, err := scrapper.ScrapInflation(startDate, finishDate)
+	if err != nil {
+		return nil, err
+	}
+
+	inflation := financialData[0].Index
 
 	installments := []*types.Installment{}
 	for i := 1; i <= numOfInstallments; i++ {
@@ -57,7 +71,7 @@ func calculateInstallmentsWithInflation(
 		installments = append(installments, installment)
 	}
 
-	return installments
+	return installments, nil
 }
 
 func sumInstallments(installments []*types.Installment) decimal.Decimal {
@@ -74,8 +88,15 @@ func calculateSavingsFromFixedTermDeposit(
 	paymentAmount decimal.Decimal,
 	installmentAmount decimal.Decimal,
 	numOfInstallments int,
-) decimal.Decimal {
-	tna := decimal.NewFromFloat(tnaRate)
+) (decimal.Decimal, error) {
+	yesterday := utils.NewClock().AddDays(-1).Format()
+
+	financialData, err := scrapper.ScrapTNA(yesterday, yesterday)
+	if err != nil {
+		return decimal.NewFromInt(0), err
+	}
+
+	tna := financialData[0].Index
 	tnm := tna.Div(decimal.NewFromInt(12))
 
 	savings := paymentAmount.Copy()
@@ -85,5 +106,5 @@ func calculateSavingsFromFixedTermDeposit(
 		savings = savings.Add(fixedDepositInterest).Sub(installmentAmount)
 	}
 
-	return savings
+	return savings, nil
 }

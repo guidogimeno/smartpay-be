@@ -1,6 +1,10 @@
 package types
 
-import "github.com/shopspring/decimal"
+import (
+	"errors"
+
+	"github.com/shopspring/decimal"
+)
 
 // API
 type PaymentRequest struct {
@@ -16,10 +20,31 @@ type Payment struct {
 	InterestRate         decimal.Decimal
 }
 
-func (p *PaymentRequest) ToPayment() *Payment {
+func (p *PaymentRequest) ToPayment() (*Payment, error) {
+	err := p.isValid()
+	if err != nil {
+		return nil, err
+	}
+
 	return &Payment{
 		Amount:               decimal.NewFromFloat(p.Amount),
 		NumberOfInstallments: p.NumberOfInstallments,
 		InterestRate:         decimal.NewFromFloat32(p.InterestRate),
+	}, nil
+}
+
+func (p *PaymentRequest) isValid() error {
+	if p.Amount <= 0 {
+		return errors.New("amount must be greater than 0")
 	}
+
+	if p.InterestRate < 0 {
+		return errors.New("interest rate must be positive")
+	}
+
+	if p.NumberOfInstallments < 1 {
+		return errors.New("number of installments must be positive")
+	}
+
+	return nil
 }
