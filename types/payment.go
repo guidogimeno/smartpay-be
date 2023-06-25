@@ -6,34 +6,21 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// API
-type PaymentRequest struct {
+type Payment struct {
 	Amount               float64 `json:"amount"`
 	NumberOfInstallments int     `json:"numberOfInstallments"`
 	InterestRate         float32 `json:"interestRate"`
 }
 
-// Domain
-type Payment struct {
-	Amount               decimal.Decimal
-	NumberOfInstallments int
-	InterestRate         decimal.Decimal
+func (p *Payment) GetAmount() decimal.Decimal {
+	return decimal.NewFromFloat(p.Amount)
 }
 
-func (p *PaymentRequest) ToPayment() (*Payment, error) {
-	err := p.isValid()
-	if err != nil {
-		return nil, err
-	}
-
-	return &Payment{
-		Amount:               decimal.NewFromFloat(p.Amount),
-		NumberOfInstallments: p.NumberOfInstallments,
-		InterestRate:         decimal.NewFromFloat32(p.InterestRate),
-	}, nil
+func (p *Payment) GeInterestRate() decimal.Decimal {
+	return decimal.NewFromFloat32(p.InterestRate)
 }
 
-func (p *PaymentRequest) isValid() error {
+func (p *Payment) IsValid() error {
 	if p.Amount <= 0 {
 		return errors.New("amount must be greater than 0")
 	}

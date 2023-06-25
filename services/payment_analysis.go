@@ -7,6 +7,10 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+const (
+	months = 12
+)
+
 func PaymentAnalysis(payment *types.Payment) (*types.Analysis, error) {
 	installmentWithInterest := calculateInstallmentWithInterest(payment)
 
@@ -21,7 +25,7 @@ func PaymentAnalysis(payment *types.Payment) (*types.Analysis, error) {
 	totalAtPresentValue := sumInstallments(installmentsAtPresentValue)
 
 	savingsFromFixedTermDeposit, err := calculateSavingsFromFixedTermDeposit(
-		payment.Amount,
+		payment.GetAmount(),
 		installmentWithInterest,
 		payment.NumberOfInstallments,
 	)
@@ -38,8 +42,8 @@ func PaymentAnalysis(payment *types.Payment) (*types.Analysis, error) {
 
 func calculateInstallmentWithInterest(payment *types.Payment) decimal.Decimal {
 	numberOfInstallments := decimal.NewFromInt(int64(payment.NumberOfInstallments))
-	installmentAmount := payment.Amount.Div(numberOfInstallments)
-	interest := installmentAmount.Mul(payment.InterestRate)
+	installmentAmount := payment.GetAmount().Div(numberOfInstallments)
+	interest := installmentAmount.Mul(payment.GeInterestRate())
 	return installmentAmount.Add(interest)
 }
 
@@ -55,7 +59,7 @@ func calculateInstallmentsWithInflation(
 		return nil, err
 	}
 
-	inflation := financialData[0].Index
+	inflation := financialData[0].GetIndex()
 
 	installments := []*types.Installment{}
 	for i := 1; i <= numOfInstallments; i++ {
@@ -89,15 +93,17 @@ func calculateSavingsFromFixedTermDeposit(
 	installmentAmount decimal.Decimal,
 	numOfInstallments int,
 ) (decimal.Decimal, error) {
-	yesterday := utils.NewClock().AddDays(-1).Format()
+	startDate := utils.NewClock().AddDays(-20).Format()
+	finishDate := utils.NewClock().AddDays(-7).Format()
 
-	financialData, err := scrapper.ScrapTNA(yesterday, yesterday)
+	financialData, err := scrapper.ScrapTNA(startDate, finishDate)
+
 	if err != nil {
 		return decimal.NewFromInt(0), err
 	}
 
-	tna := financialData[0].Index
-	tnm := tna.Div(decimal.NewFromInt(12))
+	tna := financialData[0].GetIndex()
+	tnm := tna.Div(decimal.NewFromInt(months))
 
 	savings := paymentAmount.Copy()
 

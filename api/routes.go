@@ -5,17 +5,20 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/guidogimeno/smartpay-be/db"
 	"github.com/guidogimeno/smartpay-be/services"
 	"github.com/guidogimeno/smartpay-be/types"
 )
 
 type apiServer struct {
 	listenAddr string
+	db         db.Storer
 }
 
-func NewAPIServer(listenAddr string) *apiServer {
+func NewAPIServer(listenAddr string, db db.Storer) *apiServer {
 	return &apiServer{
 		listenAddr: listenAddr,
+		db:         db,
 	}
 }
 
@@ -32,14 +35,14 @@ func handlePing(w http.ResponseWriter, r *http.Request) {
 }
 
 func handlePaymentAnalysis(w http.ResponseWriter, r *http.Request) {
-	paymentRequest := new(types.PaymentRequest)
-	if err := json.NewDecoder(r.Body).Decode(paymentRequest); err != nil {
+	var payment *types.Payment
+	if err := json.NewDecoder(r.Body).Decode(payment); err != nil {
 		writeJSON(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	defer r.Body.Close()
 
-	payment, err := paymentRequest.ToPayment()
+	err := payment.IsValid()
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, err.Error())
 		return

@@ -91,7 +91,7 @@ func buildFinancialData(n *html.Node) (*types.FinancialData, error) {
 
 	financialData := &types.FinancialData{
 		Date:  rawDate,
-		Index: index.Div(decimal.NewFromInt(100)),
+		Index: index.Div(decimal.NewFromInt(100)).InexactFloat64(),
 	}
 
 	return financialData, nil

@@ -25,6 +25,7 @@ func PostRequest(url string, body io.Reader) (*html.Node, error) {
 
 	client := http.Client{}
 	resp, err := client.Do(req)
+
 	if err != nil {
 		return nil, err
 	}
